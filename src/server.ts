@@ -1,49 +1,48 @@
 import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { ProtoGrpcType } from './proto/person';
-import { PersonServiceHandlers } from './proto/person/PersonService';
-import { Person } from './proto/person/Person';
-import * as path from 'path';
+import { type Person, type PersonRequest, PersonResponse, type PersonId } from './proto/person_pb';
+import { PersonServiceService } from './proto/person_grpc_pb';
 
-const packageDefinition = protoLoader.loadSync(
-    path.resolve(__dirname, './proto/person.proto'),
-    {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-    }
-);
+const persons: Person[] = []; 
 
-const proto = (grpc.loadPackageDefinition(packageDefinition) as unknown) as ProtoGrpcType;
+function createPerson(call: grpc.ServerUnaryCall<PersonRequest, PersonResponse>, callback: grpc.sendUnaryData<PersonResponse>) {
+    const person = call.request.getPerson();
 
-const persons: Person[] = []; // Armazenamento simples em memória
+    if (person) {
+        person.setId(persons.length + 1);
 
-const personService: PersonServiceHandlers = {
-    CreatePerson: (call, callback) => {
-        const person = call.request.person;
-        person.id = persons.length + 1; // Gerar um ID simples
         persons.push(person);
-        callback(null, { person });
-    },
-    GetPerson: (call, callback) => {
-        const personId = call.request.id;
-        const person = persons.find(p => p.id === personId);
-        if (person) {
-            callback(null, { person });
-        } else {
-            callback({
-                code: grpc.status.NOT_FOUND,
-                message: 'Person not found',
-            });
-        }
-    },
-};
+
+        const response = new PersonResponse();
+        response.setPerson(person);
+
+        callback(null, response);
+    }
+}
+
+function getPerson(call: grpc.ServerUnaryCall<PersonId, PersonResponse>, callback: grpc.sendUnaryData<PersonResponse>) {
+    const personId = call.request.getId();
+    
+    const person = persons.find(p => p.getId() === personId);
+
+    if (person) {
+        const response = new PersonResponse();
+        response.setPerson(person);
+        callback(null, response);
+    } else {
+        callback({
+            code: grpc.status.NOT_FOUND,
+            message: 'Person not found',
+        });
+    }
+}
 
 function main() {
     const server = new grpc.Server();
-    server.addService(proto.person.PersonService.service, personService);
+    server.addService(PersonServiceService, {
+        createPerson,
+        getPerson
+    });
+    
     server.bindAsync(
         '0.0.0.0:50051',
         grpc.ServerCredentials.createInsecure(),

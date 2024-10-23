@@ -1,42 +1,37 @@
 import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { ProtoGrpcType } from './proto/person';
-import { PersonServiceClient } from './proto/person/PersonService';
-import * as path from 'path';
+import { PersonServiceClient } from './proto/person_grpc_pb';
+import { Person, PersonId, PersonRequest } from './proto/person_pb';
 
-const packageDefinition = protoLoader.loadSync(
-    path.resolve(__dirname, './proto/person.proto'),
-    {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-    }
-);
-
-const proto = (grpc.loadPackageDefinition(packageDefinition) as unknown) as ProtoGrpcType;
-
-const client = new proto.person.PersonService(
+const client = new PersonServiceClient(
     'localhost:50051',
     grpc.credentials.createInsecure()
 ) as PersonServiceClient;
 
-// Criar uma nova pessoa
-client.CreatePerson(
-    { person: { name: 'João', age: 30 } },
+
+const person = new Person();
+person.setName("Edson Azevedo");
+person.setAge(10);
+
+const request = new PersonRequest();
+request.setPerson(person);
+
+
+client.createPerson(request,
     (err, response) => {
         if (err) {
             console.error(err);
         } else {
-            console.log('Person created:', response?.person);
+            console.log('Person created:', response?.getPerson());
 
-            // Buscar a pessoa criada
-            client.GetPerson({ id: response!.person!.id }, (err, response) => {
+            const reqGetPerson = new PersonId();
+
+            reqGetPerson.setId(1);
+
+            client.getPerson(reqGetPerson, (err, response) => {
                 if (err) {
                     console.error(err);
                 } else {
-                    console.log('Person fetched:', response?.person);
+                    console.log('Person fetched:', response?.getPerson());
                 }
             });
         }
