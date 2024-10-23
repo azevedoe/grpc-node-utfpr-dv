@@ -3,24 +3,24 @@ syntax = "proto3";
 package person;
 
 service PersonService {
-    rpc CreatePerson (PersonRequest) returns (PersonResponse);
-    rpc GetPerson (PersonId) returns (PersonResponse);
+  rpc CreatePerson(PersonRequest) returns (PersonResponse);
+  rpc GetPerson(PersonId) returns (PersonResponse);
 }
 
 message Person {
-    int32 id = 1;
-    string name = 2;
-    int32 age = 3;
+  int32 id = 1;
+  string name = 2;
+  int32 age = 3;
 }
 
 message PersonRequest {
-    Person person = 1;
-}
-
-message PersonResponse {
-    Person person = 1;
+  Person person = 1;
 }
 
 message PersonId {
-    int32 id = 1;
+  int32 id = 1;
+}
+
+message PersonResponse {
+  Person person = 1;
 }
